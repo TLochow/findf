@@ -1,30 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace findf {
     class Program {
         static void Main(string[] args) {
             try {
-                if (args.Length == 0) {
-                    Console.WriteLine("Searches through all files in this directory and all sub-directories for a string.");
-                    Console.WriteLine("Parameters:");
-                    Console.WriteLine("1. Parameter - Search Text: The text for which should be searched in the files.");
-                    Console.WriteLine("2. Parameter - File Path Regex (Optional): A Regex pattern to validate file paths. Only files where the path matches with this pattern will be searched. (Default: .* (All))");
+                string searchStringParameter = args.FirstOrDefault(a => a.StartsWith("-s:"));
+                if (String.IsNullOrWhiteSpace(searchStringParameter)) {
+                    PrintHelp();
                 }
                 else {
                     Stack<string> directories = new Stack<string>();
                     directories.Push(Directory.GetCurrentDirectory());
 
-                    string searchText = args[0];
+                    string searchText = searchStringParameter.Substring(3);
 
-                    string patternText = "";
-                    if (args.Length > 1)
-                        patternText = args[1];
-                    if (String.IsNullOrWhiteSpace(patternText))
-                        patternText = ".*";
+                    string patternText = ".*";
+                    string patternParameter = args.FirstOrDefault(a => a.StartsWith("-p:"));
+                    if (!String.IsNullOrWhiteSpace(patternParameter))
+                        patternText = patternParameter.Substring(3);
                     Regex pattern = new Regex(patternText);
+
+                    bool printLines = !args.Any(a => a == "-n");
 
                     while (directories.Count > 0) {
                         try {
@@ -48,7 +48,9 @@ namespace findf {
                                                 lineNumber++;
                                                 string line = reader.ReadLine();
                                                 if (line.IndexOf(searchText, StringComparison.InvariantCultureIgnoreCase) > -1) {
-                                                    Console.WriteLine("{0} - {1}:\n\r{2}\n\r", new object[] { currentFile, lineNumber, line });
+                                                    Console.WriteLine("{0} - {1}", new object[] { currentFile, lineNumber });
+                                                    if (printLines)
+                                                        Console.WriteLine(line);
                                                 }
                                             }
                                         }
@@ -69,6 +71,17 @@ namespace findf {
             catch (Exception ex) {
                 Console.WriteLine(ex.Message);
             }
+        }
+
+        public static void PrintHelp() {
+            Console.WriteLine("Searches through all files in this directory and all sub-directories for a string.");
+            Console.WriteLine();
+            Console.WriteLine("Parameters");
+            Console.WriteLine("Mandatory:");
+            Console.WriteLine("\t\"-s:{searchText}\" - The text for which should be searched in the files.");
+            Console.WriteLine("Optional:");
+            Console.WriteLine("\t\"-p:{regexPattern}\" - A Regex pattern to validate file paths. Only files where the path matches with this pattern will be searched. (Default: .* (All))");
+            Console.WriteLine("\t\"-n\" - If this parameter is given, only the files and line numbers will be outputted, but not the lines themselves.");
         }
     }
 }
